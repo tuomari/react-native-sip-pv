@@ -2,8 +2,10 @@ package com.carusto.ReactNativePjSip;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.util.Log;
 
 import com.facebook.react.bridge.*;
+
 
 public class PjSipModule extends ReactContextBaseJavaModule {
 
@@ -21,16 +23,20 @@ public class PjSipModule extends ReactContextBaseJavaModule {
         }
     }
 
+    private static final String NAME = "PjSipModule";
+
     @Override
     public String getName() {
-        return "PjSipModule";
+        return NAME;
     }
 
     @ReactMethod
     public void start(ReadableMap configuration, Callback callback) {
+        Log.w(NAME, "starting PjSipModule with config " + configuration);
         int id = receiver.register(callback);
+        Log.w(NAME, "Registered module with id: " + id);
         Intent intent = PjActions.createStartIntent(id, configuration, getReactApplicationContext());
-
+        Log.w(NAME, "Created module intent " + intent);
         getReactApplicationContext().startService(intent);
     }
 
@@ -63,7 +69,7 @@ public class PjSipModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void makeCall(int accountId, String destination, ReadableMap callSettings, ReadableMap msgData,  Callback callback) {
+    public void makeCall(int accountId, String destination, ReadableMap callSettings, ReadableMap msgData, Callback callback) {
         int callbackId = receiver.register(callback);
         Intent intent = PjActions.createMakeCallIntent(callbackId, accountId, destination, callSettings, msgData, getReactApplicationContext());
         getReactApplicationContext().startService(intent);

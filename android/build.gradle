@@ -1,32 +1,48 @@
-apply plugin: 'com.android.library'
-
 buildscript {
     repositories {
         jcenter()
+        google()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.5.0'
+        classpath 'com.android.tools.build:gradle:8.0.1'
+          //   classpath 'com.android.tools.build:gradle:1.5.0'
     }
 }
+
+apply plugin: 'com.android.library'
+
+/*plugins {
+    id 'com.android.library'
+}
+*/
+//apply plugin: 'com.android.library'
 
 repositories {
     jcenter()
+    google()
+
 }
 
 android {
-    compileSdkVersion 28
-//    buildToolsVersion "23.0.1"
+    compileSdkVersion 33
 
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 28
+        minSdkVersion 23
+        targetSdkVersion 33
         versionCode 1
         versionName "1.0"
-        ndk {
-            abiFilters "armeabi-v7a", "x86"
-        }
+     //    ndk {
+     //       abiFilters "armeabi-v7a", "x86"
+     //   }
     }
+    namespace 'com.carusto.ReactNativePjSip'
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    buildToolsVersion '30.0.2'
+    ndkVersion '25.2.9519653'
 }
 
 dependencies {

@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+exit 0
 
 VERSION="v2.8.0"
 URL="https://github.com/florindumitru/react-native-pjsip-builder/archive/${VERSION}.tar.gz"
