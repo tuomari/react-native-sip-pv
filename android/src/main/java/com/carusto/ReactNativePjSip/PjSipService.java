@@ -102,6 +102,7 @@ public class PjSipService extends Service {
 
     private void load() {
         // Load native libraries
+            /*
         Log.i(TAG, "Loading PjsipService");
         try {
             System.loadLibrary("openh264");
@@ -109,19 +110,36 @@ public class PjSipService extends Service {
             Log.e(TAG, "Error while loading OpenH264 native library", error);
             throw new RuntimeException(error);
         }
-
+*/
         try {
             System.loadLibrary("pjsua2");
         } catch (UnsatisfiedLinkError error) {
             Log.e(TAG, "Error while loading PJSIP pjsua2 native library", error);
             throw new RuntimeException(error);
         }
+        Log.i(TAG, "Loaded pjsip module");
 
         // Start stack
         try {
+            Log.i(TAG, "Creating endpoint");
+
             mEndpoint = new Endpoint();
+            Log.i(TAG, "Libcreate on endpoint");
+
             mEndpoint.libCreate();
-            mEndpoint.libRegisterThread(Thread.currentThread().getName());
+            Log.i(TAG, "LibRegisterThread on endpoint");
+            final String threadName = Thread.currentThread().getName();
+
+            // if(mEndpoint.libIsThreadRegistered()){
+            if (false) {
+                Log.e(TAG, "Thread is registerd. Not registering again" + threadName);
+            } else {
+                Log.e(TAG, "Thread is not registered.. wtf... " + threadName);
+
+            }
+             //mEndpoint.libRegisterThread(Thread.currentThread().getName());
+
+            Log.i(TAG, "Created enpoint");
 
             // Register main thread
             Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -129,7 +147,8 @@ public class PjSipService extends Service {
                 @Override
                 public void run() {
                     try {
-                        mEndpoint.libRegisterThread(Thread.currentThread().getName());
+                        Log.e(TAG, "Registering thread in runnable");
+                        // mEndpoint.libRegisterThread(Thread.currentThread().getName());
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -140,8 +159,8 @@ public class PjSipService extends Service {
             // Configure endpoint
             EpConfig epConfig = new EpConfig();
 
-            epConfig.getLogConfig().setLevel(10);
-            epConfig.getLogConfig().setConsoleLevel(10);
+            epConfig.getLogConfig().setLevel(6);
+            epConfig.getLogConfig().setConsoleLevel(6);
 
             mLogWriter = new PjSipLogWriter();
             epConfig.getLogConfig().setWriter(mLogWriter);
@@ -152,35 +171,53 @@ public class PjSipService extends Service {
                 epConfig.getUaConfig().setUserAgent("React Native PjSip (" + mEndpoint.libVersion().getFull() + ")");
             }
 
+            epConfig.getUaConfig().setStunServer(new StringVector(new String[]{"stun.linphone.org"}));
+            /*
             if (mServiceConfiguration.isStunServersNotEmpty()) {
+                Log.e(TAG, "Stun servers found" + mServiceConfiguration.getStunServers());
                 epConfig.getUaConfig().setStunServer(mServiceConfiguration.getStunServers());
+            } else {
+                Log.e(TAG, "No stun servers found");
             }
-
+*/
+            Log.e(TAG, "Setting noVad");
+            epConfig.getMedConfig().setNoVad(true); // Nat tunkk.
             epConfig.getMedConfig().setHasIoqueue(true);
             epConfig.getMedConfig().setClockRate(8000);
             epConfig.getMedConfig().setQuality(4);
             epConfig.getMedConfig().setEcOptions(1);
             epConfig.getMedConfig().setEcTailLen(200);
             epConfig.getMedConfig().setThreadCnt(2);
+
             mEndpoint.libInit(epConfig);
 
             mTrash.add(epConfig);
 
             // Configure transports
             {
+                Log.w(TAG, "Creating UDP transport");
                 TransportConfig transportConfig = new TransportConfig();
+                //transportConfig.setPort(59483);
+                //transportConfig.setRandomizePort(true);
+                //transportConfig.setPublicAddress("2.58.220.35");
                 transportConfig.setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
                 mUdpTransportId = mEndpoint.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, transportConfig);
                 mTrash.add(transportConfig);
             }
             {
+                Log.w(TAG, "Creating TCP transport");
                 TransportConfig transportConfig = new TransportConfig();
+                //transportConfig.setPort(59488);
+                //transportConfig.setRandomizePort(true);
                 transportConfig.setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
                 mTcpTransportId = mEndpoint.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TCP, transportConfig);
                 mTrash.add(transportConfig);
             }
             {
+                Log.w(TAG, "Creating TLS transport");
+
                 TransportConfig transportConfig = new TransportConfig();
+                //transportConfig.setRandomizePort(true);
                 transportConfig.setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
                 mTlsTransportId = mEndpoint.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TLS, transportConfig);
                 mTrash.add(transportConfig);
@@ -195,6 +232,7 @@ public class PjSipService extends Service {
 
     @Override
     public int onStartCommand(final Intent intent, int flags, int startId) {
+        Log.w(TAG, "StartCmd for pjsip");
         if (!mInitialized) {
             if (intent != null && intent.hasExtra("service")) {
                 mServiceConfiguration = ServiceConfigurationDTO.fromMap((Map) intent.getSerializableExtra("service"));
@@ -217,7 +255,7 @@ public class PjSipService extends Service {
             registerReceiver(mPhoneStateChangedReceiver, phoneStateFilter);
 
             mInitialized = true;
-
+            Log.w(TAG, "Start command starting load job");
             job(new Runnable() {
                 @Override
                 public void run() {
@@ -483,6 +521,20 @@ public class PjSipService extends Service {
         String idUri = configuration.getIdUri();
         String regUri = configuration.getRegUri();
 
+
+        cfg.getNatConfig().setSipStunUse(pjsua_stun_use.PJSUA_STUN_RETRY_ON_FAILURE);
+        cfg.getNatConfig().setMediaStunUse(pjsua_stun_use.PJSUA_STUN_RETRY_ON_FAILURE);
+        //if (.isIce()) {
+        //cfg.getNatConfig().setIceEnabled(true);
+        //cfg.getNatConfig().setIceAlwaysUpdate(true);
+        //cfg.getNatConfig().setIceAggressiveNomination(true);
+
+//        cfg.getNatConfig().setSipStunUse(pjsua_stun_use.PJSUA_STUN_RETRY_ON_FAILURE);
+//        cfg.getNatConfig().setMediaStunUse(pjsua_stun_use.PJSUA_STUN_RETRY_ON_FAILURE);
+//        cfg.getNatConfig().setIceEnabled(false);
+        //cfg.getNatConfig().setIceTrickle(pj_ice_sess_trickle.PJ_ICE_SESS_TRICKLE_HALF);
+        //cfg.getNatConfig().setUdpKaIntervalSec(1);
+
         cfg.setIdUri(idUri);
         cfg.getRegConfig().setRegistrarUri(regUri);
         cfg.getRegConfig().setRegisterOnAdd(configuration.isRegOnAdd());
@@ -540,8 +592,29 @@ public class PjSipService extends Service {
             cfg.getSipConfig().setProxies(v);
         }
 
-        cfg.getMediaConfig().getTransportConfig().setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
+        {
+            SrtpOpt opt = new SrtpOpt();
+            IntVector optVector = new IntVector();
+            optVector.add(pjmedia_srtp_keying_method.PJMEDIA_SRTP_KEYING_DTLS_SRTP);
+            optVector.add(pjmedia_srtp_keying_method.PJMEDIA_SRTP_KEYING_SDES);
+            opt.setKeyings(optVector);
+            cfg.getMediaConfig().setSrtpOpt(opt);
+        }
 
+        cfg.getMediaConfig().getTransportConfig().setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
+        cfg.getMediaConfig().setSrtpUse(pjmedia_srtp_use.PJMEDIA_SRTP_OPTIONAL);
+        cfg.getMediaConfig().getTransportConfig().setPort(20000);
+        cfg.getMediaConfig().getTransportConfig().setPortRange(65000);
+
+        //cfg.getMediaConfig().setSrtpSecureSignaling(1);
+        //cfg.getMediaConfig().setRtcpMuxEnabled(true);
+
+        {
+            //cfg.getMediaConfig().getTransportConfig().getTlsConfig().setVerifyServer(false);
+            //cfg.getMediaConfig().getTransportConfig().getTlsConfig().setVerifyClient(false);
+            //cfg.getMediaConfig().getTransportConfig().getTlsConfig().setCertBuf();
+            //cfg.getMediaConfig().getTransportConfig().getTlsConfig().setMethod(pjsip_ssl_method.PJSIP_TLSV1_2_METHOD);
+        }
         cfg.getVideoConfig().setAutoShowIncoming(true);
         cfg.getVideoConfig().setAutoTransmitOutgoing(true);
 
@@ -643,13 +716,13 @@ public class PjSipService extends Service {
 
             PjSipCall call = new PjSipCall(account);
             call.makeCall(destination, callOpParam);
-
             callOpParam.delete();
 
             // Automatically put other calls on hold.
             doPauseParallelCalls(call);
 
             mCalls.add(call);
+            Log.w(TAG, "Created call"+ call.toJsonString());
             mEmitter.fireIntentHandled(intent, call.toJson());
         } catch (Exception e) {
             mEmitter.fireIntentHandled(intent, e);

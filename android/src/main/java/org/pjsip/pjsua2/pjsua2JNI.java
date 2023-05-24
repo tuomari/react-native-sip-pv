@@ -23,13 +23,15 @@ public class pjsua2JNI {
                 "don't use OpenH264 video codec.");
         }
 
- */
+
         try {
             Log.w("pjsua2Debug", "Loading pjsua2 library");
             System.loadLibrary("pjsua2");
         } catch (UnsatisfiedLinkError e) {
             Log.e("pjsua2Debug", String.format("Failed to load native library pjsua2\n %s", e));
         }
+
+ */
     }
 
     public final static native void pj_qos_params_flags_set(long jarg1, pj_qos_params jarg1_, short jarg2);

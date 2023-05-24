@@ -33,6 +33,7 @@ public class AccountConfigurationDTO {
     public String regContactParams;
 
     public boolean regOnAdd;
+    private String directIdUri;
 
     public String getName() {
         return name;
@@ -95,6 +96,9 @@ public class AccountConfigurationDTO {
     }
 
     public String getIdUri() {
+        if(directIdUri != null && !directIdUri.isBlank()){
+            return directIdUri;
+        }
         if (name != null) {
             return name + " <sip:"+ username +"@"+ domain +">";
         }
@@ -116,6 +120,7 @@ public class AccountConfigurationDTO {
 
     public static AccountConfigurationDTO fromIntent(Intent intent) {
         AccountConfigurationDTO c = new AccountConfigurationDTO();
+        c.directIdUri = intent.getStringExtra("idUri");
         c.name = intent.getStringExtra("name");
         c.username = intent.getStringExtra("username");
         c.domain = intent.getStringExtra("domain");
