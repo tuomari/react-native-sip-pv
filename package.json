@@ -1,15 +1,14 @@
 {
   "scripts": {
-    "postinstall": "bash libs.sh",
     "lint": "eslint ./src",
     "generate-docs": "node_modules/.bin/jsdoc --configure .jsdoc.json --verbose"
   },
   "author": {
-    "name": "Florin Dumitru",
-    "email": "dumitru.florin@outlook.com"
+    "name": "Tuomas Riihimäki",
+    "email": "tuomas.riihimaki@xudei.fi"
   },
   "bugs": {
-    "url": "https://github.com/florindumitru/react-native-sip/issues"
+    "url": "https://github.com/tuomari/react-native-sip-pv/issues"
   },
   "dependencies": {
     "events": "1.1.0"
@@ -28,7 +27,7 @@
   },
   "name": "react-native-sip",
   "description": "SIP module for React Native",
-  "homepage": "https://github.com/florindumitru/react-native-sip",
+  "homepage": "https://github.com/tuomari/react-native-sip-pv",
   "keywords": [
     "react-component",
     "react-native",
@@ -44,7 +43,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/florindumitru/react-native-sip.git"
+    "url": "git+https://github.com/tuomari/react-native-sip-pv.git"
   },
-  "version": "2.9.3"
+  "version": "2.10.0"
 }
