@@ -189,7 +189,7 @@ public class PjSipService extends Service {
             Log.e(TAG, "Setting noVad");
 
             epConfig.getMedConfig().setNoVad(cfg.getNoVad());
-            if (cfg.getNoVad() != null)
+            if (cfg.getMediaClockRate() != null)
                 epConfig.getMedConfig().setClockRate(cfg.getMediaClockRate());
             if (cfg.getMediaQuality() != null)
                 epConfig.getMedConfig().setQuality(cfg.getMediaQuality());
