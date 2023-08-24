@@ -117,15 +117,6 @@ public class ServiceConfigurationDTO {
         return c;
     }
 
-    public static long getValueLong(Map<String, ?> conf, String key, long defaultValue) {
-        if (conf.containsKey(key)) {
-            Object val = conf.get(key);
-            if
-            Long.valueOf(val.toString());
-        }
-
-    }
-
     public static ServiceConfigurationDTO fromConfiguration(ReadableMap data) {
         ServiceConfigurationDTO c = new ServiceConfigurationDTO();
 
