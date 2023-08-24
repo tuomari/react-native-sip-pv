@@ -96,24 +96,29 @@ public class ServiceConfigurationDTO {
         ServiceConfigurationDTO c = new ServiceConfigurationDTO();
 
         if (conf.containsKey("ua")) {
-            c.ua = conf.get("ua").toString();
+            Object ua = conf.get("ua");
+            if (ua != null && !ua.toString().isBlank()) {
+                c.ua = ua.toString();
+            }
         }
 
         if (conf.containsKey("stun")) {
-            c.stun = (ArrayList) conf.get("stun");
+            Object stunobj = conf.get("stun");
+            c.stun = (ArrayList) stunobj;
         }
         if (conf.containsKey("noVad")) {
             c.noVad = "true".equalsIgnoreCase(conf.get("noVad").toString());
         }
-        setLong(conf, "mediaClockRate", (clockRate) -> c.mediaClockRate = clockRate );
+        setLong(conf, "mediaClockRate", (clockRate) -> c.mediaClockRate = clockRate);
         setLong(conf, "mediaQuality", quality -> c.mediaQuality = quality);
-        setLong(conf, "ecOptions", ecOptions-> c.ecOptions = ecOptions);
+        setLong(conf, "ecOptions", ecOptions -> c.ecOptions = ecOptions);
         setLong(conf, "ecTailLen", ecTailLen -> c.ecTailLen = ecTailLen);
         setLong(conf, "mediaThreadCount", mediaThreadCount -> c.mediaThreadCount = mediaThreadCount);
 
         setLong(conf, "msgLogging", msgLogging -> c.msgLogging = msgLogging);
         setLong(conf, "logLevel", logLevel -> c.logLevel = logLevel);
         setLong(conf, "consoleLogLevel", consoleLogLevel -> c.consoleLogLevel = consoleLogLevel);
+        Log.d(TAG, "Pjsip config " + c.toString());
         return c;
     }
 
@@ -193,5 +198,22 @@ public class ServiceConfigurationDTO {
     public int hashCode() {
         return Objects.hash(ua, stun, noVad, mediaClockRate, mediaQuality,
                 ecOptions, ecTailLen, mediaThreadCount, msgLogging, logLevel, consoleLogLevel);
+    }
+
+    @Override
+    public String toString() {
+        return "ServiceConfigurationDTO{" +
+                "ua='" + ua + '\'' +
+                ", stun=" + stun +
+                ", noVad=" + noVad +
+                ", mediaClockRate=" + mediaClockRate +
+                ", mediaQuality=" + mediaQuality +
+                ", ecOptions=" + ecOptions +
+                ", ecTailLen=" + ecTailLen +
+                ", mediaThreadCount=" + mediaThreadCount +
+                ", msgLogging=" + msgLogging +
+                ", logLevel=" + logLevel +
+                ", consoleLogLevel=" + consoleLogLevel +
+                '}';
     }
 }
