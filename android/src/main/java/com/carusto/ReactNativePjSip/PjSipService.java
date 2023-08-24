@@ -156,11 +156,17 @@ public class PjSipService extends Service {
             };
             uiHandler.post(runnable);
 
+            final ServiceConfigurationDTO cfg = mServiceConfiguration;
             // Configure endpoint
             EpConfig epConfig = new EpConfig();
+            epConfig.getMedConfig().setHasIoqueue(true);
 
-            epConfig.getLogConfig().setLevel(6);
-            epConfig.getLogConfig().setConsoleLevel(6);
+            if (cfg.getMsgLogging() != null)
+                epConfig.getLogConfig().setMsgLogging(cfg.getMsgLogging());
+            if (cfg.getLogLevel() != null)
+                epConfig.getLogConfig().setLevel(cfg.getLogLevel());
+            if (cfg.getConsoleLogLevel() != null)
+                epConfig.getLogConfig().setConsoleLevel(cfg.getConsoleLogLevel());
 
             mLogWriter = new PjSipLogWriter();
             epConfig.getLogConfig().setWriter(mLogWriter);
@@ -171,23 +177,31 @@ public class PjSipService extends Service {
                 epConfig.getUaConfig().setUserAgent("React Native PjSip (" + mEndpoint.libVersion().getFull() + ")");
             }
 
-            epConfig.getUaConfig().setStunServer(new StringVector(new String[]{"stun.linphone.org"}));
-            /*
+            //epConfig.getUaConfig().setStunServer(new StringVector(new String[]{"stun.linphone.org"}));
+
             if (mServiceConfiguration.isStunServersNotEmpty()) {
                 Log.e(TAG, "Stun servers found" + mServiceConfiguration.getStunServers());
                 epConfig.getUaConfig().setStunServer(mServiceConfiguration.getStunServers());
             } else {
                 Log.e(TAG, "No stun servers found");
             }
-*/
+
             Log.e(TAG, "Setting noVad");
-            epConfig.getMedConfig().setNoVad(true); // Nat tunkk.
-            epConfig.getMedConfig().setHasIoqueue(true);
-            epConfig.getMedConfig().setClockRate(8000);
-            epConfig.getMedConfig().setQuality(4);
-            epConfig.getMedConfig().setEcOptions(1);
-            epConfig.getMedConfig().setEcTailLen(200);
-            epConfig.getMedConfig().setThreadCnt(2);
+
+            epConfig.getMedConfig().setNoVad(cfg.getNoVad());
+            if (cfg.getNoVad() != null)
+                epConfig.getMedConfig().setClockRate(cfg.getMediaClockRate());
+            if (cfg.getMediaQuality() != null)
+                epConfig.getMedConfig().setQuality(cfg.getMediaQuality());
+            if (cfg.getEcOptions() != null)
+                epConfig.getMedConfig().setEcOptions(cfg.getEcOptions());
+            if (cfg.getEcTailLen() != null)
+                epConfig.getMedConfig().setEcTailLen(cfg.getEcTailLen());
+            if (cfg.getMediaThreadCount() != null)
+                epConfig.getMedConfig().setThreadCnt(cfg.getMediaThreadCount());
+            else {
+                epConfig.getMedConfig().setThreadCnt(1);
+            }
 
             mEndpoint.libInit(epConfig);
 
