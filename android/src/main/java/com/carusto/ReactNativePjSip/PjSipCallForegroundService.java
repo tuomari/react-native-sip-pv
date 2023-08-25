@@ -79,7 +79,7 @@ public class PjSipCallForegroundService extends Service {
 
 
     //notificationIntent.setPackage("com.mobileclientv2");
-    PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+    PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
     Notification notification = notificationBuilder
       .setContentTitle("Active call in ICC Manager")
       .setContentText(notificationText)
