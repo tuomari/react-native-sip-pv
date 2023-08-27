@@ -5,7 +5,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
+import android.media.MicrophoneInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
@@ -1067,7 +1069,7 @@ public class PjSipService extends Service {
                 public void run() {
                     // Acquire wake lock
                     if (mIncallWakeLock == null) {
-                        mIncallWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "incall");
+                        mIncallWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
                     }
                     if (!mIncallWakeLock.isHeld()) {
                         mIncallWakeLock.acquire();
@@ -1082,7 +1084,20 @@ public class PjSipService extends Service {
                     mWifiLock.acquire();
 
                     if (callState == pjsip_inv_state.PJSIP_INV_STATE_EARLY || callState == pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED) {
-                        mAudioManager.setMode(AudioManager.MODE_IN_CALL);
+                        mAudioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                        // TODO: mAudioManager is supported only in API-version 31 and later.
+                        // Implement also in the old way...
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                          if (mAudioManager.getCommunicationDevice().getType() != AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                            for (AudioDeviceInfo dev : mAudioManager.getAvailableCommunicationDevices()) {
+                              Log.d(TAG, "Found Bluetooth device. Using it by default");
+                              if (dev.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                                mAudioManager.setCommunicationDevice(dev);
+                                break;
+                              }
+                            }
+                          }
+                        }
                     }
                 }
             });
@@ -1115,6 +1130,9 @@ public class PjSipService extends Service {
                 if (mCalls.size() == 1) {
                     mAudioManager.setSpeakerphoneOn(false);
                     mAudioManager.setMode(AudioManager.MODE_NORMAL);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    mAudioManager.clearCommunicationDevice();
+                  }
                 }
             }
         });
@@ -1170,7 +1188,8 @@ public class PjSipService extends Service {
                 job(new Runnable() {
                     @Override
                     public void run() {
-                        doPauseAllCalls();
+                      // TODO: Do not put calls on hold, when receiving GSM call...
+                      // doPauseAllCalls();
                     }
                 });
             } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(extraState)) {

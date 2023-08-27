@@ -1,6 +1,10 @@
 package com.carusto.ReactNativePjSip;
 
-import android.app.*;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
 import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
@@ -9,12 +13,9 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-import com.carusto.ReactNativePjSip.utils.ArgumentUtils;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
-import org.jetbrains.annotations.NotNull;
 
 public class PjSipCallForegroundService extends Service {
   public static final String CHANNEL_ID = "IccPjSIPForegroundServiceChannel";
@@ -83,7 +84,7 @@ public class PjSipCallForegroundService extends Service {
     Notification notification = notificationBuilder
       .setContentTitle("Active call in ICC Manager")
       .setContentText(notificationText)
-      .setSmallIcon(R.drawable.autofill_inline_suggestion_chip_background)
+      .setSmallIcon(R.drawable.phone_icon)
       .setContentIntent(pendingIntent)
       .setCategory("call")
       .build();
