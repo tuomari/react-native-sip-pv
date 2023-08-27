@@ -84,9 +84,11 @@ public class PjSipCallForegroundService extends Service {
     Notification notification = notificationBuilder
       .setContentTitle("Active call in ICC Manager")
       .setContentText(notificationText)
+      //´.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_DEFERRED)
+      .setPriority(NotificationCompat.PRIORITY_MAX)
       .setSmallIcon(R.drawable.phone_icon)
       .setContentIntent(pendingIntent)
-      .setCategory("call")
+      .setCategory(Notification.CATEGORY_CALL)
       .build();
     startForeground(1, notification);
     notification = notification;
