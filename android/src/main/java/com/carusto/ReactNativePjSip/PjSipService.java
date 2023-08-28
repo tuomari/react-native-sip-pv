@@ -113,7 +113,12 @@ public class PjSipService extends Service {
             throw new RuntimeException(error);
         }
 */
-        try {
+
+      Log.d(TAG, "PjSIpService MAIN priority: " + Process.getThreadPriority(0) + " for thread " + Thread.currentThread().getName());
+      Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
+      Log.d(TAG, "PjSIpService MAIN priority2: " + Process.getThreadPriority(0) + " for thread " + Thread.currentThread().getName());
+
+      try {
             System.loadLibrary("pjsua2");
         } catch (UnsatisfiedLinkError error) {
             Log.e(TAG, "Error while loading PJSIP pjsua2 native library", error);
