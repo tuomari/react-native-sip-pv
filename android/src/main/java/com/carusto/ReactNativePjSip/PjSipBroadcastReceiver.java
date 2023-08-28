@@ -110,17 +110,13 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
         String json = intent.getStringExtra("data");
         Object params = ArgumentUtils.fromJson(json);
         emit("pjSipCallChanged", params);
-        Intent foregroundIntent = new Intent(context, PjSipCallForegroundService.class);
-        foregroundIntent.putExtra("call", json);
-        context.startForegroundService(foregroundIntent);
+
     }
 
     private void onCallTerminated(Intent intent) {
         String json = intent.getStringExtra("data");
         Object params = ArgumentUtils.fromJson(json);
         emit("pjSipCallTerminated", params);
-        Intent serviceIntent = new Intent(context, PjSipCallForegroundService.class);
-        context.stopService(serviceIntent);
     }
 
     private void onCallback(Intent intent) {

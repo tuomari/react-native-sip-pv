@@ -73,9 +73,6 @@ public class PjSipModule extends ReactContextBaseJavaModule {
         int callbackId = receiver.register(callback);
         Intent intent = PjActions.createMakeCallIntent(callbackId, accountId, destination, callSettings, msgData, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
-        Intent foregroundIntent = new Intent(getReactApplicationContext(), PjSipCallForegroundService.class);
-        foregroundIntent.putExtra("destination", destination);
-        getReactApplicationContext().startForegroundService(foregroundIntent);
     }
 
     @ReactMethod

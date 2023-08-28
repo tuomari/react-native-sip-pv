@@ -1,5 +1,9 @@
 package com.carusto.ReactNativePjSip;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -20,6 +24,8 @@ import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import androidx.core.app.NotificationCompat;
+
 import com.carusto.ReactNativePjSip.dto.AccountConfigurationDTO;
 import com.carusto.ReactNativePjSip.dto.CallSettingsDTO;
 import com.carusto.ReactNativePjSip.dto.ServiceConfigurationDTO;
@@ -28,6 +34,9 @@ import com.carusto.ReactNativePjSip.utils.ArgumentUtils;
 
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.ReadableMapKeySetIterator;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import org.json.JSONObject;
 import org.pjsip.pjsua2.*;
@@ -40,7 +49,9 @@ import java.util.Map;
 public class PjSipService extends Service {
 
     private static String TAG = "PjSipService";
-
+  public static final String CHANNEL_ID = "IccPjSIPForegroundServiceChannel";
+  private NotificationCompat.Builder mNotificationBuilder;
+  private NotificationManager mnotificationManager;
     private boolean mInitialized;
 
     private HandlerThread mWorkerThread;
@@ -250,6 +261,77 @@ public class PjSipService extends Service {
         }
     }
 
+    private static final int CALL_NOTIFICATION_ID = 1;
+    public void removeFromForeground(){
+      mNotificationBuilder = null;
+      stopForeground(true);
+    }
+    public void putToForeground(String destination){
+      //super.onStartCommand(intent, flags, startId);
+
+      String notificationText = null;
+      try {
+        if (destination != null && !destination.isBlank()) {
+          int startIdx = destination.indexOf(':');
+          int endIdx = destination.indexOf('@');
+
+          if (endIdx > 0) {
+            notificationText = destination.substring(startIdx + 1, endIdx);
+          }
+        } /*else if (callJson != null && !callJson.isBlank()) {
+          JsonObject call = JsonParser.parseString(callJson).getAsJsonObject();
+          JsonElement remotenr = call.get("_remoteNumber");
+          if (remotenr != null) {
+            notificationText = remotenr.getAsString();
+          }else {
+            JsonElement remoteUri = call.get("remoteUri");
+          }
+        }*/
+      } catch (Exception e) {
+        // never throw exception while parsing phone number
+      }
+
+
+
+      if (mNotificationBuilder != null) {
+        Log.w(TAG, "Notification already exists. Only update.. with " + notificationText);
+        if (notificationText != null) {
+          mNotificationBuilder.setContentText(notificationText);
+          mnotificationManager.notify(CALL_NOTIFICATION_ID, mNotificationBuilder.build());
+        }
+        return;
+      }
+
+      if (notificationText == null) {
+        notificationText = "-";
+      }
+
+      this.mNotificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
+
+      Intent notificationIntent = getPackageManager()
+        .getLaunchIntentForPackage(getPackageName())
+        .setPackage(null)
+        .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+
+
+      //notificationIntent.setPackage("com.mobileclientv2");
+      PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+      Notification notification = mNotificationBuilder
+        .setContentTitle("Active call in ICC Manager")
+        .setContentText(notificationText)
+        //´.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_DEFERRED)
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setSmallIcon(R.drawable.phone_icon)
+        .setOngoing(true)
+        .setContentIntent(pendingIntent)
+        .setCategory(Notification.CATEGORY_CALL)
+        .build();
+      startForeground(CALL_NOTIFICATION_ID, notification);
+      notification = notification;
+      //do heavy work on a background thread
+      //stopSelf();
+
+    }
 
     @Override
     public int onStartCommand(final Intent intent, int flags, int startId) {
@@ -274,7 +356,15 @@ public class PjSipService extends Service {
 
             IntentFilter phoneStateFilter = new IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
             registerReceiver(mPhoneStateChangedReceiver, phoneStateFilter);
-
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel serviceChannel = new NotificationChannel(
+              CHANNEL_ID,
+              "Foreground Service Channel",
+              NotificationManager.IMPORTANCE_HIGH
+            );
+            this.mnotificationManager = getSystemService(NotificationManager.class);
+            mnotificationManager.createNotificationChannel(serviceChannel);
+          }
             mInitialized = true;
             Log.w(TAG, "Start command starting load job");
             job(new Runnable() {
@@ -688,6 +778,8 @@ public class PjSipService extends Service {
             String settingsJson = intent.getStringExtra("settings");
             String messageJson = intent.getStringExtra("message");
 
+            putToForeground(destination);
+
             // -----
             CallOpParam callOpParam = new CallOpParam(true);
 
@@ -1068,7 +1160,7 @@ public class PjSipService extends Service {
         try {
             final int callId = call.getId();
             final int callState = call.getInfo().getState();
-
+            putToForeground(call.getInfo().getRemoteUri());
             job(new Runnable() {
                 @Override
                 public void run() {
@@ -1135,8 +1227,10 @@ public class PjSipService extends Service {
                 if (mCalls.size() == 1) {
                     mAudioManager.setSpeakerphoneOn(false);
                     mAudioManager.setMode(AudioManager.MODE_NORMAL);
+                  removeFromForeground();
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     mAudioManager.clearCommunicationDevice();
+
                   }
                 }
             }
