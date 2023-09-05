@@ -470,13 +470,23 @@ public class PjSipService extends Service {
     }
 
     void emmitRegistrationChanged(PjSipAccount account, OnRegStateParam prm) {
-        mEmitter.fireEvent(PjEventType.EVENT_REGISTRATION_CHANGED, account.toJson());
+        this.fireEvent(PjEventType.EVENT_REGISTRATION_CHANGED, account.toJson());
     }
 
     void emmitMessageReceived(PjSipAccount account, PjSipMessage message) {
-        mEmitter.fireEvent(PjEventType.EVENT_MESSAGE_RECEIVED, message.toJson());
+        this.fireEvent(PjEventType.EVENT_MESSAGE_RECEIVED, message.toJson());
     }
 
+
+    public void fireEvent(PjEventType type, JSONObject data){
+        Intent intent = new Intent();
+        intent.setAction(type.eventName);
+        intent.putExtra("data", data.toString());
+
+        this.sendBroadcast(intent);
+    }
+
+    
     void emmitCallReceived(PjSipAccount account, PjSipCall call) {
         // Automatically decline incoming call when user uses GSM
         if (!mGSMIdle) {
@@ -525,7 +535,7 @@ public class PjSipService extends Service {
 
         // -----
         mCalls.add(call);
-        mEmitter.fireEvent(PjEventType.EVENT_CALL_RECEIVED, call.toJson());
+        this.fireEvent(PjEventType.EVENT_CALL_RECEIVED, call.toJson());
     }
 
     void emmitCallStateChanged(PjSipCall call, OnCallStateParam prm) {
@@ -572,7 +582,7 @@ public class PjSipService extends Service {
             Log.w(TAG, "Failed to retrieve call state", e);
         }
 
-        mEmitter.fireEvent(PjEventType.EVENT_CALL_CHANGED, call.toJson());
+        this.fireEvent(PjEventType.EVENT_CALL_CHANGED, call.toJson());
     }
 
 
@@ -596,12 +606,12 @@ public class PjSipService extends Service {
             }
         });
 
-        mEmitter.fireEvent(PjEventType.EVENT_CALL_TERMINATED, call.toJson());
+        this.fireEvent(PjEventType.EVENT_CALL_TERMINATED, call.toJson());
         evict(call);
     }
 
     void emmitCallUpdated(PjSipCall call) {
-        mEmitter.fireEvent(PjEventType.EVENT_CALL_CHANGED, call.toJson());
+        this.fireEvent(PjEventType.EVENT_CALL_CHANGED, call.toJson());
     }
 
     /**
