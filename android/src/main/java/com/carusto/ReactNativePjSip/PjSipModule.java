@@ -1,9 +1,9 @@
 package com.carusto.ReactNativePjSip;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.util.Log;
 
+import com.carusto.ReactNativePjSip.action.*;
 import com.facebook.react.bridge.*;
 
 
@@ -35,7 +35,7 @@ public class PjSipModule extends ReactContextBaseJavaModule {
         Log.w(NAME, "starting PjSipModule with config " + configuration);
         int id = receiver.register(callback);
         Log.w(NAME, "Registered module with id: " + id);
-        Intent intent = PjActions.createStartIntent(id, configuration, getReactApplicationContext());
+        Intent intent = StartPjsipAction.createIntent(id, configuration, getReactApplicationContext());
         Log.w(NAME, "Created module intent " + intent);
         getReactApplicationContext().startService(intent);
     }
@@ -43,133 +43,120 @@ public class PjSipModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void changeServiceConfiguration(ReadableMap configuration, Callback callback) {
         int id = receiver.register(callback);
-        Intent intent = PjActions.createSetServiceConfigurationIntent(id, configuration, getReactApplicationContext());
+        Intent intent = SetServiceConfigAction.createIntent(id, configuration, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void createAccount(ReadableMap configuration, Callback callback) {
         int id = receiver.register(callback);
-        Intent intent = PjActions.createAccountCreateIntent(id, configuration, getReactApplicationContext());
+        Intent intent =  AccountCreateAction.createIntent(id, configuration, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void registerAccount(int accountId, boolean renew, Callback callback) {
         int id = receiver.register(callback);
-        Intent intent = PjActions.createAccountRegisterIntent(id, accountId, renew, getReactApplicationContext());
+        Intent intent = AccountRegisterAction.createIntent(id, accountId, renew, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void deleteAccount(int accountId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createAccountDeleteIntent(callbackId, accountId, getReactApplicationContext());
+        Intent intent = AccountDeleteAction.createIntent(callbackId, accountId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void makeCall(int accountId, String destination, ReadableMap callSettings, ReadableMap msgData, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createMakeCallIntent(callbackId, accountId, destination, callSettings, msgData, getReactApplicationContext());
+        Intent intent = MakeCallAction.createIntent(callbackId, accountId, destination, callSettings, msgData, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void hangupCall(int callId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createHangupCallIntent(callbackId, callId, getReactApplicationContext());
+        Intent intent = CallHangupAction.createIntent(callbackId, callId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void declineCall(int callId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createDeclineCallIntent(callbackId, callId, getReactApplicationContext());
+        Intent intent = CallDeclineAction.createIntent(callbackId, callId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void answerCall(int callId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createAnswerCallIntent(callbackId, callId, getReactApplicationContext());
+        Intent intent = CallAnswerAction.createIntent(callbackId, callId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void holdCall(int callId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createHoldCallIntent(callbackId, callId, getReactApplicationContext());
+        Intent intent = CallHoldAction.createIntent(callbackId, callId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void unholdCall(int callId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createUnholdCallIntent(callbackId, callId, getReactApplicationContext());
+        Intent intent = CallUholdAction.createIntent(callbackId, callId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void muteCall(int callId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createMuteCallIntent(callbackId, callId, getReactApplicationContext());
+        Intent intent = CallMuteAction.createIntent(callbackId, callId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void unMuteCall(int callId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createUnMuteCallIntent(callbackId, callId, getReactApplicationContext());
-        getReactApplicationContext().startService(intent);
-    }
-
-    @ReactMethod
-    public void useSpeaker(int callId, Callback callback) {
-        int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createUseSpeakerCallIntent(callbackId, callId, getReactApplicationContext());
-        getReactApplicationContext().startService(intent);
-    }
-
-    @ReactMethod
-    public void useEarpiece(int callId, Callback callback) {
-        int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createUseEarpieceCallIntent(callbackId, callId, getReactApplicationContext());
+        Intent intent = CallUnmuteAction.createIntent(callbackId, callId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void xferCall(int callId, String destination, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createXFerCallIntent(callbackId, callId, destination, getReactApplicationContext());
+        Intent intent = CallXferAction.createIntent(callbackId, callId, destination, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void xferReplacesCall(int callId, int destCallId, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createXFerReplacesCallIntent(callbackId, callId, destCallId, getReactApplicationContext());
+        Intent intent = CallXferReplaceAction.createIntent(callbackId, callId, destCallId, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void redirectCall(int callId, String destination, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createRedirectCallIntent(callbackId, callId, destination, getReactApplicationContext());
+        Intent intent = CallRedirectAction.createIntent(callbackId, callId, destination, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void dtmfCall(int callId, String digits, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createDtmfCallIntent(callbackId, callId, digits, getReactApplicationContext());
+        Intent intent = CallRedirectAction.createIntent(callbackId, callId, digits, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
 
     @ReactMethod
     public void changeCodecSettings(ReadableMap codecSettings, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createChangeCodecSettingsIntent(callbackId, codecSettings, getReactApplicationContext());
+        Intent intent = ChangeCodecSettingsAction.createIntent(callbackId, codecSettings, getReactApplicationContext());
         getReactApplicationContext().startService(intent);
     }
+
 }

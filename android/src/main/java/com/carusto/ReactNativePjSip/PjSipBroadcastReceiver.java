@@ -11,18 +11,21 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
 public class PjSipBroadcastReceiver extends BroadcastReceiver {
 
-    private static String TAG = "PjSipBroadcastReceiver";
+    private static final String TAG = "PjSipBroadcastReceiver";
 
-    private int seq = 0;
+    private final AtomicInteger seq = new AtomicInteger(0);
 
     private ReactApplicationContext context;
 
-    private HashMap<Integer, Callback> callbacks = new HashMap<>();
+    private final Map<Integer, Callback> callbacks = new ConcurrentHashMap<>();
 
     public PjSipBroadcastReceiver(ReactApplicationContext context) {
         this.context = context;
@@ -33,22 +36,16 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
     }
 
     public int register(Callback callback) {
-        int id = ++seq;
+        final int id = seq.incrementAndGet();
         callbacks.put(id, callback);
         return id;
     }
 
     public IntentFilter getFilter() {
         IntentFilter filter = new IntentFilter();
-        filter.addAction(PjActions.EVENT_STARTED);
-        filter.addAction(PjActions.EVENT_ACCOUNT_CREATED);
-        filter.addAction(PjActions.EVENT_REGISTRATION_CHANGED);
-        filter.addAction(PjActions.EVENT_CALL_RECEIVED);
-        filter.addAction(PjActions.EVENT_CALL_CHANGED);
-        filter.addAction(PjActions.EVENT_CALL_TERMINATED);
-        filter.addAction(PjActions.EVENT_CALL_SCREEN_LOCKED);
-        filter.addAction(PjActions.EVENT_MESSAGE_RECEIVED);
-        filter.addAction(PjActions.EVENT_HANDLED);
+        for (PjEventType type : PjEventType.values()) {
+            filter.addAction(type.eventName);
+        }
 
         return filter;
     }
@@ -57,66 +54,24 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
 
-        Log.d(TAG, "Received \""+ action +"\" response from service (" + ArgumentUtils.dumpIntentExtraParameters(intent) + ")");
-
-        switch (action) {
-            case PjActions.EVENT_STARTED:
-                onCallback(intent);
-                break;
-            case PjActions.EVENT_ACCOUNT_CREATED:
-                onCallback(intent);
-                break;
-            case PjActions.EVENT_REGISTRATION_CHANGED:
-                onRegistrationChanged(intent);
-                break;
-            case PjActions.EVENT_MESSAGE_RECEIVED:
-                onMessageReceived(intent);
-                break;
-            case PjActions.EVENT_CALL_RECEIVED:
-                onCallReceived(intent);
-                break;
-            case PjActions.EVENT_CALL_CHANGED:
-                onCallChanged(intent);
-                break;
-            case PjActions.EVENT_CALL_TERMINATED:
-                onCallTerminated(intent);
-                break;
-            default:
-                onCallback(intent);
-                break;
+        Log.d(TAG, "Received \"" + action + "\" response from service (" + ArgumentUtils.dumpIntentExtraParameters(intent) + ")");
+        final PjEventType actionEvent = PjEventType.findEventByName(action);
+        if (actionEvent == null) {
+            Log.w(TAG, "No event found by action: " + action);
+            return;
         }
-    }
-
-    private void onRegistrationChanged(Intent intent) {
-        String json = intent.getStringExtra("data");
-        Object params = ArgumentUtils.fromJson(json);
-        emit("pjSipRegistrationChanged", params);
-    }
-
-    private void onMessageReceived(Intent intent) {
-        String json = intent.getStringExtra("data");
-        Object params = ArgumentUtils.fromJson(json);
-
-        emit("pjSipMessageReceived", params);
-    }
-
-    private void onCallReceived(Intent intent) {
-        String json = intent.getStringExtra("data");
-        Object params = ArgumentUtils.fromJson(json);
-        emit("pjSipCallReceived", params);
-    }
-
-    private void onCallChanged(Intent intent) {
-        String json = intent.getStringExtra("data");
-        Object params = ArgumentUtils.fromJson(json);
-        emit("pjSipCallChanged", params);
+        if (actionEvent.reactEventName != null) {
+            callReactAction(intent, actionEvent.reactEventName);
+        } else {
+            onCallback(intent);
+        }
 
     }
 
-    private void onCallTerminated(Intent intent) {
+    private void callReactAction(Intent intent, String reactEventName) {
         String json = intent.getStringExtra("data");
         Object params = ArgumentUtils.fromJson(json);
-        emit("pjSipCallTerminated", params);
+        emit(reactEventName, params);
     }
 
     private void onCallback(Intent intent) {
@@ -128,7 +83,7 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
             if (callbacks.containsKey(id)) {
                 callback = callbacks.remove(id);
             } else {
-                Log.w(TAG, "Callback with \""+ id +"\" identifier not found (\""+ intent.getAction() +"\")");
+                Log.w(TAG, "Callback with \"" + id + "\" identifier not found (\"" + intent.getAction() + "\")");
             }
         }
 
