@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
+import com.carusto.ReactNativePjSip.action.PjSipReactAction;
 import com.carusto.ReactNativePjSip.utils.ArgumentUtils;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -56,20 +57,22 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
 
         Log.d(TAG, "Received \"" + action + "\" response from service (" + ArgumentUtils.dumpIntentExtraParameters(intent) + ")");
         final PjEventType actionEvent = PjEventType.findEventByName(action);
+
         if (actionEvent == null) {
             Log.w(TAG, "No event found by action: " + action);
             return;
         }
-        if (actionEvent.reactEventName != null) {
-            callReactAction(intent, actionEvent.reactEventName);
-        } else {
+
+        if (actionEvent == PjEventType.ACTION_CALLBACK) {
             onCallback(intent);
+        } else {
+            callReactAction(intent, actionEvent.reactEventName);
         }
 
     }
 
     private void callReactAction(Intent intent, String reactEventName) {
-        String json = intent.getStringExtra("data");
+        String json = intent.getStringExtra(PjSipReactAction.KEY_DATA);
         Object params = ArgumentUtils.fromJson(json);
         emit(reactEventName, params);
     }
@@ -78,8 +81,8 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
         // Define callback
         Callback callback = null;
 
-        if (intent.hasExtra("callback_id")) {
-            int id = intent.getIntExtra("callback_id", -1);
+        if (intent.hasExtra(PjSipReactAction.CALLBACK_EXTRA_KEY)) {
+            int id = intent.getIntExtra(PjSipReactAction.CALLBACK_EXTRA_KEY, -1);
             if (callbacks.containsKey(id)) {
                 callback = callbacks.remove(id);
             } else {
@@ -92,11 +95,12 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
         }
 
         // -----
-        if (intent.hasExtra("exception")) {
-            Log.w(TAG, "Callback executed with exception state: " + intent.getStringExtra("exception"));
-            callback.invoke(false, intent.getStringExtra("exception"));
-        } else if (intent.hasExtra("data")) {
-            Object params = ArgumentUtils.fromJson(intent.getStringExtra("data"));
+        if (intent.hasExtra(PjSipReactAction.KEY_EXCEPTION)) {
+            final String exceptionString = intent.getStringExtra("exception");
+            Log.w(TAG, "Callback executed with exception state: " + exceptionString);
+            callback.invoke(false, exceptionString);
+        } else if (intent.hasExtra(PjSipReactAction.KEY_DATA)) {
+            Object params = ArgumentUtils.fromJson(intent.getStringExtra(PjSipReactAction.KEY_DATA));
             callback.invoke(true, params);
         } else {
             callback.invoke(true, true);

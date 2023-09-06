@@ -18,14 +18,11 @@ public class AccountCreateAction extends PjSipReactAction implements PjSipAction
 
 
     public static Intent createIntent(int callbackId, ReadableMap configuration, Context context) {
-        Intent intent = new Intent(context, PjSipService.class);
-        intent.setAction(PjActionType.ACTION_CREATE_ACCOUNT.actionName);
-        intent.putExtra(CALLBACK_EXTRA_KEY, callbackId);
-
+        Intent intent = createCallbackIntent(PjActionType.ACTION_CREATE_ACCOUNT, callbackId, context);
         formatIntent(intent, configuration);
-
         return intent;
     }
+
 
     @Override
     public void handle(PjSipService service, Intent intent) {
@@ -111,7 +108,7 @@ public class AccountCreateAction extends PjSipReactAction implements PjSipAction
                 transportId = transportIds.get(configuration.getTransport());
             } else {
                 Log.w(TAG, "Illegal \"" + configuration.getTransport() + "\" transport (possible values are UDP, TCP or TLS) use TCP instead");
-                         }
+            }
         }
         // Fallback to some transport... This most likely will fail
         if (transportId == null ) {

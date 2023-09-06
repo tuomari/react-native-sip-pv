@@ -5,15 +5,16 @@ package com.carusto.ReactNativePjSip;
  */
 public enum PjEventType implements NamespacedEnum {
 
-    // EVENT_STARTED(),
-    // EVENT_ACCOUNT_CREATED(),
     EVENT_REGISTRATION_CHANGED("pjSipRegistrationChanged"),
     EVENT_CALL_CHANGED("pjSipCallChanged"),
     EVENT_CALL_TERMINATED("pjSipCallTerminated"),
     EVENT_CALL_RECEIVED("pjSipCallReceived"),
-    //EVENT_CALL_SCREEN_LOCKED("pjSipCallScreenLocked"),
     EVENT_MESSAGE_RECEIVED("pjSipMessageReceived"),
-    EVENT_HANDLED(),
+
+    // This is a special event for action callbacks.
+    ACTION_CALLBACK(null),
+
+
     ;
 
     private static final String TAG = "PjEventType";
@@ -23,10 +24,6 @@ public enum PjEventType implements NamespacedEnum {
     PjEventType(String reactEventName) {
         this.reactEventName = reactEventName;
         this.eventName = PjsipConfig.getNamespace() + name();
-    }
-
-    PjEventType() {
-        this(null);
     }
 
     static PjEventType findEventByName(String eventName) {

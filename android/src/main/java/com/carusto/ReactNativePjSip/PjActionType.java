@@ -4,7 +4,7 @@ import com.carusto.ReactNativePjSip.action.*;
 import org.jetbrains.annotations.Nullable;
 
 public enum PjActionType implements NamespacedEnum {
-    ACTION_START(),
+    ACTION_START(new StartPjsipAction()),
     ACTION_CREATE_ACCOUNT(new AccountCreateAction()),
     ACTION_CHANGE_CODEC_SETTINGS(new ChangeCodecSettingsAction()),
     ACTION_REGISTER_ACCOUNT(new AccountRegisterAction()),
@@ -29,9 +29,6 @@ public enum PjActionType implements NamespacedEnum {
     @Nullable
     public final PjSipActionIntentHandler intentHandler ;
 
-    PjActionType() {
-        this(null);
-    }
 
     PjActionType(PjSipActionIntentHandler intentHandler) {
         this.intentHandler = intentHandler;

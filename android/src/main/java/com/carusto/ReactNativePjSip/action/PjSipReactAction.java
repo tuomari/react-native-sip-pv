@@ -1,7 +1,10 @@
 package com.carusto.ReactNativePjSip.action;
 
+import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
+
+import com.carusto.ReactNativePjSip.PjActionType;
 import com.carusto.ReactNativePjSip.PjEventType;
 import com.carusto.ReactNativePjSip.PjSipService;
 import com.facebook.react.bridge.ReadableMap;
@@ -16,8 +19,17 @@ import java.util.Map;
 public abstract class PjSipReactAction {
 
     public static final String CALLBACK_EXTRA_KEY = "callback_id";
+    public static final String KEY_EXCEPTION = "exception";
+    public static final String KEY_DATA = "data";
 
     private static final String TAG = "PjSipReactAction";
+
+    protected static Intent createCallbackIntent(PjActionType type, int callbackId, Context context) {
+        Intent intent = new Intent(context, PjSipService.class);
+        intent.setAction(type.actionName);
+        intent.putExtra(CALLBACK_EXTRA_KEY, callbackId);
+        return intent;
+    }
 
 
     protected void sendEventHandled(PjSipService service, Intent original) {
@@ -30,19 +42,19 @@ public abstract class PjSipReactAction {
 
     protected void sendEventHandled(PjSipService service, Intent original, String data) {
         Intent intent = new Intent();
-        intent.setAction(PjEventType.EVENT_HANDLED.eventName);
+        intent.setAction(PjEventType.ACTION_CALLBACK.eventName);
         intent.putExtra(CALLBACK_EXTRA_KEY, original.getIntExtra(CALLBACK_EXTRA_KEY, -1));
         if (data != null) {
-            intent.putExtra("data", data);
+            intent.putExtra(KEY_DATA, data);
         }
         service.sendBroadcast(intent);
     }
 
     protected void sendEventException(PjSipService service, Intent original, Exception e) {
         Intent intent = new Intent();
-        intent.setAction(PjEventType.EVENT_HANDLED.eventName);
+        intent.setAction(PjEventType.ACTION_CALLBACK.eventName);
         intent.putExtra(CALLBACK_EXTRA_KEY, original.getIntExtra(CALLBACK_EXTRA_KEY, -1));
-        intent.putExtra("exception", e.getMessage());
+        intent.putExtra(KEY_EXCEPTION, e.getMessage());
 
         service.sendBroadcast(intent);
     }

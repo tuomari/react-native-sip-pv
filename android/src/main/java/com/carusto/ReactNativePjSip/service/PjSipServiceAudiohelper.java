@@ -4,16 +4,13 @@ import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
-import android.os.Handler;
 import android.util.Log;
-import com.carusto.ReactNativePjSip.PjSipBroadcastEmiter;
 
 
 public class PjSipServiceAudiohelper implements AutoCloseable {
 
     private static final String TAG = "PjSipServiceAudiohelper";
     private final AudioManager mAudioManager;
-    private final PjSipBroadcastEmiter mEmitter;
 
     private final AudioDeviceCallback newAudioDeviceCallback = new AudioDeviceCallback() {
         @Override
@@ -27,8 +24,7 @@ public class PjSipServiceAudiohelper implements AutoCloseable {
         }
     };
 
-    public PjSipServiceAudiohelper(AudioManager audioManager, PjSipBroadcastEmiter emitter) {
-        this.mEmitter = emitter;
+    public PjSipServiceAudiohelper(AudioManager audioManager) {
         this.mAudioManager = audioManager;
 
         mAudioManager.registerAudioDeviceCallback(newAudioDeviceCallback, null);

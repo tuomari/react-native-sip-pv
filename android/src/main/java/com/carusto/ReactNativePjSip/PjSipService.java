@@ -9,36 +9,22 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
-import android.media.MicrophoneInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.PowerManager;
 import android.os.Process;
-import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
-import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-import com.carusto.ReactNativePjSip.dto.AccountConfigurationDTO;
-import com.carusto.ReactNativePjSip.dto.CallSettingsDTO;
 import com.carusto.ReactNativePjSip.dto.ServiceConfigurationDTO;
-import com.carusto.ReactNativePjSip.dto.SipMessageDTO;
 import com.carusto.ReactNativePjSip.service.PjSipServiceAudiohelper;
 import com.carusto.ReactNativePjSip.utils.ArgumentUtils;
-
-import com.facebook.react.bridge.ReadableMap;
-import com.facebook.react.bridge.ReadableMapKeySetIterator;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -67,8 +53,6 @@ public class PjSipService extends Service {
 
     private PjSipLogWriter mLogWriter;
 
-    private PjSipBroadcastEmiter mEmitter;
-
     private List<PjSipAccount> mAccounts = new ArrayList<>();
 
     private List<PjSipCall> mCalls = new ArrayList<>();
@@ -92,10 +76,6 @@ public class PjSipService extends Service {
 
     private BroadcastReceiver mPhoneStateChangedReceiver = new PhoneStateChangedReceiver();
     private PjSipServiceAudiohelper mAudioHelper;
-
-    public PjSipBroadcastEmiter getEmitter() {
-        return mEmitter;
-    }
 
 
     @Override
@@ -329,8 +309,7 @@ public class PjSipService extends Service {
             mWorkerThread.setPriority(Thread.MAX_PRIORITY);
             mWorkerThread.start();
             mHandler = new Handler(mWorkerThread.getLooper());
-            mEmitter = new PjSipBroadcastEmiter(this);
-            mAudioHelper = new PjSipServiceAudiohelper((AudioManager) getApplicationContext().getSystemService(AUDIO_SERVICE), mEmitter);
+            mAudioHelper = new PjSipServiceAudiohelper(this, (AudioManager) getApplicationContext().getSystemService(AUDIO_SERVICE));
 
             mPowerManager = (PowerManager) getApplicationContext().getSystemService(POWER_SERVICE);
             mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -445,7 +424,7 @@ public class PjSipService extends Service {
     }
 
 
-    public void addAccount(Account account) {
+    public void addAccount(PjSipAccount account) {
         mAccounts.add(account);
     }
 
@@ -479,14 +458,16 @@ public class PjSipService extends Service {
 
 
     public void fireEvent(PjEventType type, JSONObject data){
+        fireEvent(type, data.toString());
+    }
+    public void fireEvent(PjEventType type, String data){
         Intent intent = new Intent();
         intent.setAction(type.eventName);
-        intent.putExtra("data", data.toString());
-
+        intent.putExtra("data", data);
         this.sendBroadcast(intent);
     }
 
-    
+
     void emmitCallReceived(PjSipAccount account, PjSipCall call) {
         // Automatically decline incoming call when user uses GSM
         if (!mGSMIdle) {
@@ -658,6 +639,10 @@ public class PjSipService extends Service {
 
     public List<PjSipCall> getCalls() {
         return mCalls;
+    }
+
+    public PjSipServiceAudiohelper getAudioHelper() {
+        return mAudioHelper;
     }
 
 
