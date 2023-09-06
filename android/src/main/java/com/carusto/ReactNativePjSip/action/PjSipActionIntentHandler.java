@@ -7,5 +7,4 @@ import com.facebook.react.bridge.ReadableMap;
 
 public interface PjSipActionIntentHandler {
     void handle(PjSipService pjSipService, Intent intent);
-    //Intent createIntent(int id, ReadableMap configuration, ReactApplicationContext reactApplicationContext);
 }

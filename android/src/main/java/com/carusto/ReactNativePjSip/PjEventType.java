@@ -11,6 +11,10 @@ public enum PjEventType implements NamespacedEnum {
     EVENT_CALL_RECEIVED("pjSipCallReceived"),
     EVENT_MESSAGE_RECEIVED("pjSipMessageReceived"),
 
+    EVENT_AUDIODEVICES_ADDED("pjSipAudiodevicesAdded"),
+    EVENT_AUDIODEVICES_REMOVED("pjSipAudiodevicesRemoved"),
+
+
     // This is a special event for action callbacks.
     ACTION_CALLBACK(null),
 

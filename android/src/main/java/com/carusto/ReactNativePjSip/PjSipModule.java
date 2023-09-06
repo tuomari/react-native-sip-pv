@@ -159,4 +159,25 @@ public class PjSipModule extends ReactContextBaseJavaModule {
         getReactApplicationContext().startService(intent);
     }
 
+    @ReactMethod
+    public void getAudioDevices(Callback callback) {
+        int callbackId = receiver.register(callback);
+        Intent intent = AudioGetDevicesAction.createIntent(callbackId, getReactApplicationContext());
+        getReactApplicationContext().startService(intent);
+    }
+
+    @ReactMethod
+    public void setSelectedAudioDevice(String deviceId, Callback callback) {
+        int callbackId = receiver.register(callback);
+        Intent intent = AudioSelectDeviceAction.createIntent(callbackId, deviceId, getReactApplicationContext());
+        getReactApplicationContext().startService(intent);
+    }
+
+    @ReactMethod
+    public void getSelectedAudioDevice(Callback callback) {
+        int callbackId = receiver.register(callback);
+        Intent intent = AudioGetSelectedDeviceAction.createIntent(callbackId, getReactApplicationContext());
+        getReactApplicationContext().startService(intent);
+    }
+
 }

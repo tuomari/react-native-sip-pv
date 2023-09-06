@@ -56,9 +56,13 @@ export default class Endpoint extends EventEmitter {
         DeviceEventEmitter.addListener('pjSipCallReceived', this._onCallReceived.bind(this));
         DeviceEventEmitter.addListener('pjSipCallChanged', this._onCallChanged.bind(this));
         DeviceEventEmitter.addListener('pjSipCallTerminated', this._onCallTerminated.bind(this));
-        DeviceEventEmitter.addListener('pjSipCallScreenLocked', this._onCallScreenLocked.bind(this));
+        // DeviceEventEmitter.addListener('pjSipCallScreenLocked', this._onCallScreenLocked.bind(this));
         DeviceEventEmitter.addListener('pjSipMessageReceived', this._onMessageReceived.bind(this));
         DeviceEventEmitter.addListener('pjSipConnectivityChanged', this._onConnectivityChanged.bind(this));
+
+        DeviceEventEmitter.addListener('pjSipAudiodevicesAdded', this._onAudiodevicesAdded.bind(this));
+        DeviceEventEmitter.addListener('pjSipAudiodevicesRemoved', this._onAudiodevicesRemoved.bind(this));
+
     }
 
     /**
@@ -582,6 +586,43 @@ export default class Endpoint extends EventEmitter {
         });
     }
 
+    getAudioDevices() {
+        return new Promise(function(resolve, reject) {
+        NativeModules.PjSipModule.getAudioDevices((successful, data) => {
+            if (successful) {
+                resolve(data);
+            } else {
+                reject(data);
+            }
+         });
+       });
+    }
+
+
+    setSelectedAudioDevice(deviceId) {
+        return new Promise(function(resolve, reject) {
+        NativeModules.PjSipModule.setSelectedAudioDevice(deviceId, (successful, data) => {
+            if (successful) {
+                resolve(data);
+            } else {
+                reject(data);
+            }
+         });
+       });
+    }
+
+    getSelectedAudioDevice(deviceId) {
+        return new Promise(function(resolve, reject) {
+        NativeModules.PjSipModule.getSelectedAudioDevice((successful, data) => {
+            if (successful) {
+                resolve(data);
+            } else {
+                reject(data);
+            }
+         });
+       });
+    }
+
     /**
      * @fires Endpoint#connectivity_changed
      * @private
@@ -700,6 +741,13 @@ export default class Endpoint extends EventEmitter {
         this.emit("connectivity_changed", available);
     }
 
+    _onAudiodevicesAdded(devices) {
+        this.emit("audiodevices_added", devices );
+    }
+
+    _onAudiodevicesRemoved(devices){
+      this.emit("audiodevices_removed", devices );
+    }
     /**
      * Normalize Destination URI
      *

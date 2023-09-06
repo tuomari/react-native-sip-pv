@@ -23,6 +23,10 @@ public enum PjActionType implements NamespacedEnum {
     ACTION_DTMF_CALL(new CallDTFMAction()),
     ACTION_SET_SERVICE_CONFIGURATION( new SetServiceConfigAction()),
 
+    ACTION_AUDIO_GET_DEVICES(new AudioGetDevicesAction()),
+    ACTION_AUDIO_SELECT_DEVICE(new AudioSelectDeviceAction()),
+    ACTION_AUDIO_GET_SELECTED_DEVICE(new AudioGetSelectedDeviceAction()),
+
     ;
 
     private static final String TAG = "PjActionType";

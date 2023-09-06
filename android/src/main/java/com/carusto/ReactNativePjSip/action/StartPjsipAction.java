@@ -29,7 +29,6 @@ public class StartPjsipAction extends PjSipReactAction implements PjSipActionInt
     }
 
     public void handle(PjSipService service, Intent intent) {
-
         try {
             // Modify existing configuration if it changes during application reload.
             if (intent.hasExtra("service")) {
