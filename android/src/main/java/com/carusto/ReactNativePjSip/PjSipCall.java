@@ -5,6 +5,7 @@ import android.media.AudioManager;
 import android.util.Log;
 import android.view.View;
 
+import com.carusto.ReactNativePjSip.service.PjSipCallStateListener;
 import com.google.gson.Gson;
 
 import org.json.JSONArray;
@@ -40,7 +41,7 @@ public class PjSipCall extends Call {
         this.account = acc;
     }
 
-    public PjSipService getService() {
+    public PjSipCallStateListener getService() {
         return account.getService();
     }
 
@@ -52,7 +53,7 @@ public class PjSipCall extends Call {
         isHeld = true;
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getService().emitCallUpdated(this);
 
         // Send reinvite to server for hold
         setHold(new CallOpParam(true));
@@ -66,7 +67,7 @@ public class PjSipCall extends Call {
         isHeld = false;
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getService().emitCallUpdated(this);
 
         // Send reinvite to server for release from hold
         CallOpParam prm = new CallOpParam(true);
@@ -75,6 +76,7 @@ public class PjSipCall extends Call {
         reinvite(prm);
     }
 
+    // TODO: Move to audio helper?
     public void mute() throws Exception {
         if (isMuted) {
             return;
@@ -84,9 +86,10 @@ public class PjSipCall extends Call {
         doMute(true);
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getService().emitCallUpdated(this);
     }
 
+    // TODO: Move to audio helper?
     public void unmute() throws Exception {
         if (!isMuted) {
             return;
@@ -96,9 +99,10 @@ public class PjSipCall extends Call {
         doMute(false);
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getService().emitCallUpdated(this);
     }
 
+    // TODO: Move to audio helper?
     private void doMute(boolean mute) throws Exception {
         CallInfo info;
         try {
@@ -155,7 +159,7 @@ public class PjSipCall extends Call {
     public void onCallState(OnCallStateParam prm) {
         super.onCallState(prm);
 
-        getService().emmitCallStateChanged(this, prm);
+        getService().emitCallStateChanged(this, prm);
     }
 
     @Override
@@ -207,7 +211,7 @@ public class PjSipCall extends Call {
         }
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getService().emitCallUpdated(this);
     }
 
     public JSONObject toJson() {
@@ -217,8 +221,8 @@ public class PjSipCall extends Call {
             CallInfo info = getInfo();
 
             // -----
-            AudioManager audioManager = (AudioManager) getService().getBaseContext().getSystemService(Context.AUDIO_SERVICE);
-            boolean speaker = audioManager.isSpeakerphoneOn();
+            //AudioManager audioManager = (AudioManager) getService().getAudioHelper().isSpeakerphoneOn();
+            //boolean speaker = audioManager.isSpeakerphoneOn();
 
             // -----
             int connectDuration = -1;
@@ -246,7 +250,7 @@ public class PjSipCall extends Call {
             json.put("totalDuration", info.getTotalDuration().getSec());
             json.put("held", isHeld);
             json.put("muted", isMuted);
-            json.put("speaker", speaker);
+            //json.put("speaker", speaker);
 
             try {
                 json.put("lastStatusCode", info.getLastStatusCode());

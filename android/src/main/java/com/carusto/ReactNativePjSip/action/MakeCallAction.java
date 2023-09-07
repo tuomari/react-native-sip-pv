@@ -44,7 +44,7 @@ public class MakeCallAction extends PjSipReactAction implements PjSipActionInten
             String settingsJson = intent.getStringExtra("settings");
             String messageJson = intent.getStringExtra("message");
 
-            service.putToForeground(destination);
+            service.getForegroundHelper().putToForeground(destination);
 
             // -----
             CallOpParam callOpParam = new CallOpParam(true);
@@ -98,9 +98,9 @@ public class MakeCallAction extends PjSipReactAction implements PjSipActionInten
             callOpParam.delete();
 
             // Automatically put other calls on hold.
-            service.doPauseParallelCalls(call);
+            //service.doPauseParallelCalls(call);
 
-            service.addCall(call);
+            service.getCallStateHelper().addCall(call);
             Log.w(TAG, "Created call" + call.toJsonString());
 
             sendEventHandledJson(service, intent, call.toJson());

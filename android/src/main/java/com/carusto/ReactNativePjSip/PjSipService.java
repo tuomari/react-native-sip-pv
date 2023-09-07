@@ -1,43 +1,39 @@
 package com.carusto.ReactNativePjSip;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.Process;
+import android.telecom.ConnectionService;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
-import androidx.core.app.NotificationCompat;
-
 import com.carusto.ReactNativePjSip.dto.ServiceConfigurationDTO;
+import com.carusto.ReactNativePjSip.service.BluetoothReceiver;
+import com.carusto.ReactNativePjSip.service.PjSipCallStateHelper;
+import com.carusto.ReactNativePjSip.service.PjSipCallStateListener;
+import com.carusto.ReactNativePjSip.service.PjSipForegroundHelper;
 import com.carusto.ReactNativePjSip.service.PjSipServiceAudiohelper;
+import com.carusto.ReactNativePjSip.service.PjSipTelephonyHelper;
 import com.carusto.ReactNativePjSip.utils.ArgumentUtils;
 
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.pjsip.pjsua2.*;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 
-public class PjSipService extends Service {
+public class PjSipService extends ConnectionService {
 
     private static String TAG = "PjSipService";
-    public static final String CHANNEL_ID = "IccPjSIPForegroundServiceChannel";
-    private NotificationCompat.Builder mNotificationBuilder;
-    private NotificationManager mnotificationManager;
     private boolean mInitialized;
 
     private HandlerThread mWorkerThread;
@@ -55,33 +51,27 @@ public class PjSipService extends Service {
 
     private List<PjSipAccount> mAccounts = new ArrayList<>();
 
-    private List<PjSipCall> mCalls = new ArrayList<>();
 
     // In order to ensure that GC will not destroy objects that are used in PJSIP
     // Also there is limitation of pjsip that thread should be registered first before working with library
     // (but we couldn't register GC thread in pjsip)
     private List<Object> mTrash = new LinkedList<>();
 
-    private PowerManager mPowerManager;
 
-    private PowerManager.WakeLock mIncallWakeLock;
 
     private TelephonyManager mTelephonyManager;
 
     private WifiManager mWifiManager;
 
-    private WifiManager.WifiLock mWifiLock;
 
-    private boolean mGSMIdle;
 
-    private BroadcastReceiver mPhoneStateChangedReceiver = new PhoneStateChangedReceiver();
     private PjSipServiceAudiohelper mAudioHelper;
+    private BluetoothReceiver mBluetoothReceiver;
+    private PjSipTelephonyHelper mTelephonyHelper;
+    private PjSipForegroundHelper mForegroundHelper;
+    private final List<AutoCloseable> cleanupObjects = new ArrayList<>();
+    private PjSipCallStateHelper mCallStateHelper;
 
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
 
     public PjSipService() {
         super();
@@ -114,6 +104,8 @@ public class PjSipService extends Service {
             Log.i(TAG, "Creating endpoint");
 
             mEndpoint = new Endpoint();
+            addToCleanup(() -> mEndpoint.libDestroy());
+
             Log.i(TAG, "Libcreate on endpoint");
 
             mEndpoint.libCreate();
@@ -237,68 +229,10 @@ public class PjSipService extends Service {
         return transportIds;
     }
 
-    private static final int CALL_NOTIFICATION_ID = 1;
-
-    public void removeFromForeground() {
-        mNotificationBuilder = null;
-        stopForeground(STOP_FOREGROUND_REMOVE);
-    }
-
-    public void putToForeground(String destination) {
-
-        String notificationText = null;
-        try {
-            if (destination != null && !destination.isBlank()) {
-                int startIdx = destination.indexOf(':');
-                int endIdx = destination.indexOf('@');
-
-                if (endIdx > 0) {
-                    notificationText = destination.substring(startIdx + 1, endIdx);
-                }
-            }
-        } catch (Exception e) {
-            // never throw exception while parsing phone number
-        }
-
-        if (mNotificationBuilder != null) {
-            Log.w(TAG, "Notification already exists. Only update.. with " + notificationText);
-            if (notificationText != null) {
-                mNotificationBuilder.setContentText(notificationText);
-                mnotificationManager.notify(CALL_NOTIFICATION_ID, mNotificationBuilder.build());
-            }
-            return;
-        }
-
-        if (notificationText == null) {
-            notificationText = "-";
-        }
-
-        this.mNotificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
-
-        Intent notificationIntent = getPackageManager()
-            .getLaunchIntentForPackage(getPackageName())
-            .setPackage(null)
-            .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-
-
-        //notificationIntent.setPackage("com.mobileclientv2");
-        PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-        Notification notification = mNotificationBuilder
-            .setContentTitle("Active call in ICC Manager")
-            .setContentText(notificationText)
-            //´.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_DEFERRED)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setSmallIcon(R.drawable.phone_icon)
-            .setOngoing(true)
-            .setContentIntent(pendingIntent)
-            .setCategory(Notification.CATEGORY_CALL)
-            .build();
-        startForeground(CALL_NOTIFICATION_ID, notification);
-
-    }
 
     @Override
     public int onStartCommand(final Intent intent, int flags, int startId) {
+        super.onStartCommand(intent, flags, startId)
         Log.w(TAG, "StartCmd for pjsip");
         if (!mInitialized) {
             if (intent != null && intent.hasExtra("service")) {
@@ -306,26 +240,22 @@ public class PjSipService extends Service {
             }
 
             mWorkerThread = new HandlerThread(getClass().getSimpleName(), Process.THREAD_PRIORITY_FOREGROUND);
+            addToCleanup(() -> mWorkerThread.quitSafely());
             mWorkerThread.setPriority(Thread.MAX_PRIORITY);
             mWorkerThread.start();
-            mHandler = new Handler(mWorkerThread.getLooper());
-            mAudioHelper = new PjSipServiceAudiohelper(this, (AudioManager) getApplicationContext().getSystemService(AUDIO_SERVICE));
 
-            mPowerManager = (PowerManager) getApplicationContext().getSystemService(POWER_SERVICE);
-            mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-            mWifiLock = mWifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, this.getPackageName() + "-wifi-call-lock");
-            mWifiLock.setReferenceCounted(false);
-            mTelephonyManager = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-            mGSMIdle = mTelephonyManager.getCallState() == TelephonyManager.CALL_STATE_IDLE;
+            mHandler = new Handler(mWorkerThread.getLooper());
+            mAudioHelper = addToCleanup(new PjSipServiceAudiohelper(this, (AudioManager) getApplicationContext().getSystemService(AUDIO_SERVICE)));
+
+
+            mTelephonyHelper = addToCleanup(new PjSipTelephonyHelper(this));
+            /* Handling of GSM stuff should be in TelephonyHelper
             IntentFilter phoneStateFilter = new IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
             registerReceiver(mPhoneStateChangedReceiver, phoneStateFilter);
-            NotificationChannel serviceChannel = new NotificationChannel(
-                CHANNEL_ID,
-                "PjSip goreground Service Channel",
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            this.mnotificationManager = getSystemService(NotificationManager.class);
-            mnotificationManager.createNotificationChannel(serviceChannel);
+             */
+            mBluetoothReceiver = addToCleanup(new BluetoothReceiver(this));
+            mForegroundHelper = addToCleanup(new PjSipForegroundHelper(this));
+            mCallStateHelper = addToCleanup(new PjSipCallStateHelper(this));
             mInitialized = true;
             Log.w(TAG, "Start command starting load job");
 
@@ -339,30 +269,42 @@ public class PjSipService extends Service {
         return START_NOT_STICKY;
     }
 
+    public PjSipCallStateHelper getCallStateHelper() {
+        return mCallStateHelper;
+    }
+
+
+    @FunctionalInterface
+    private interface Closeuppable extends AutoCloseable {
+        @Override
+        void close() throws Exception;
+    }
+
+    private void addToCleanup(Closeuppable consumer) {
+        cleanupObjects.add(consumer);
+    }
+
+    private <T extends AutoCloseable> T addToCleanup(T cleanupObject) {
+        cleanupObjects.add(cleanupObject);
+        return cleanupObject;
+    }
+
     @Override
     public void onDestroy() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            mWorkerThread.quitSafely();
-        }
-
-        try {
-            if (mEndpoint != null) {
-                mEndpoint.libDestroy();
+        while (!cleanupObjects.isEmpty()) {
+            try (AutoCloseable ignored = cleanupObjects.remove(0)) {
+            } catch (Exception e) {
+                Log.w(TAG, "Error closing resource", e);
             }
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to destroy PjSip library", e);
         }
-
-        unregisterReceiver(mPhoneStateChangedReceiver);
-
         super.onDestroy();
     }
 
-    private void job(Runnable job) {
+    public void job(Runnable job) {
         mHandler.post(job);
     }
 
-    protected synchronized AudDevManager getAudDevManager() {
+    public synchronized AudDevManager getAudDevManager() {
         return mEndpoint.audDevManager();
     }
 
@@ -392,8 +334,7 @@ public class PjSipService extends Service {
             job(() -> evict(call));
             return;
         }
-
-        mCalls.remove(call);
+        mCallStateHelper.evict(call);
         call.delete();
     }
 
@@ -448,152 +389,20 @@ public class PjSipService extends Service {
         throw new Exception("Call with specified \"" + id + "\" id not found");
     }
 
-    void emmitRegistrationChanged(PjSipAccount account, OnRegStateParam prm) {
-        this.fireEvent(PjEventType.EVENT_REGISTRATION_CHANGED, account.toJson());
-    }
-
-    void emmitMessageReceived(PjSipAccount account, PjSipMessage message) {
-        this.fireEvent(PjEventType.EVENT_MESSAGE_RECEIVED, message.toJson());
-    }
 
 
-    public void fireEvent(PjEventType type, JSONObject data){
+
+    public void fireEvent(PjEventType type, JSONObject data) {
         fireEvent(type, data.toString());
     }
-    public void fireEvent(PjEventType type, String data){
+
+    public void fireEvent(PjEventType type, String data) {
         Intent intent = new Intent();
         intent.setAction(type.eventName);
         intent.putExtra("data", data);
-        this.sendBroadcast(intent);
+        service.sendBroadcast(intent);
     }
 
-
-    void emmitCallReceived(PjSipAccount account, PjSipCall call) {
-        // Automatically decline incoming call when user uses GSM
-        if (!mGSMIdle) {
-            try {
-                call.hangup(new CallOpParam(true));
-            } catch (Exception e) {
-                Log.w(TAG, "Failed to decline incoming call when user uses GSM", e);
-            }
-
-            return;
-        }
-
-        /**
-         // Automatically start application when incoming call received.
-         if (mAppHidden) {
-         try {
-         String ns = getApplicationContext().getPackageName();
-         String cls = ns + ".MainActivity";
-
-         Intent intent = new Intent(getApplicationContext(), Class.forName(cls));
-         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.EXTRA_DOCK_STATE_CAR);
-         intent.addCategory(Intent.CATEGORY_LAUNCHER);
-         intent.putExtra("foreground", true);
-
-         startActivity(intent);
-         } catch (Exception e) {
-         Log.w(TAG, "Failed to open application on received call", e);
-         }
-         }
-
-         job(new Runnable() {
-        @Override public void run() {
-        // Brighten screen at least 10 seconds
-        PowerManager.WakeLock wl = mPowerManager.newWakeLock(
-        PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE | PowerManager.FULL_WAKE_LOCK,
-        "incoming_call"
-        );
-        wl.acquire(10000);
-
-        if (mCalls.size() == 0) {
-        mAudioManager.setSpeakerphoneOn(true);
-        }
-        }
-        });
-         **/
-
-        // -----
-        mCalls.add(call);
-        this.fireEvent(PjEventType.EVENT_CALL_RECEIVED, call.toJson());
-    }
-
-    void emmitCallStateChanged(PjSipCall call, OnCallStateParam prm) {
-        try {
-            if (call.getInfo().getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
-                emmitCallTerminated(call, prm);
-            } else {
-                emmitCallChanged(call, prm);
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to handle call state event", e);
-        }
-    }
-
-    void emmitCallChanged(PjSipCall call, OnCallStateParam prm) {
-        try {
-            final int callId = call.getId();
-            final int callState = call.getInfo().getState();
-            putToForeground(call.getInfo().getRemoteUri());
-            job(new Runnable() {
-                @Override
-                public void run() {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        Log.d(TAG, "Call changed Foreground service type: " + getForegroundServiceType());
-                    }
-
-                    // Acquire wake lock
-                    if (mIncallWakeLock == null) {
-                        mIncallWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-                    }
-                    if (!mIncallWakeLock.isHeld()) {
-                        mIncallWakeLock.acquire();
-                    }
-
-                    // Acquire wifi lock
-                    mWifiLock.acquire();
-
-                    if (callState == pjsip_inv_state.PJSIP_INV_STATE_EARLY || callState == pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED) {
-                        mAudioHelper.callStarted();
-                    }
-                }
-            });
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to retrieve call state", e);
-        }
-
-        this.fireEvent(PjEventType.EVENT_CALL_CHANGED, call.toJson());
-    }
-
-
-    void emmitCallTerminated(PjSipCall call, OnCallStateParam prm) {
-        final int callId = call.getId();
-
-        job(() -> {
-            // Release wake lock
-            if (mCalls.size() == 1) {
-                if (mIncallWakeLock != null && mIncallWakeLock.isHeld()) {
-                    mIncallWakeLock.release();
-                }
-            }
-
-            // Reset audio settings
-            if (mCalls.size() == 1) {
-                mWifiLock.release();
-                mAudioHelper.callClosed();
-                removeFromForeground();
-
-            }
-        });
-
-        this.fireEvent(PjEventType.EVENT_CALL_TERMINATED, call.toJson());
-        evict(call);
-    }
-
-    void emmitCallUpdated(PjSipCall call) {
-        this.fireEvent(PjEventType.EVENT_CALL_CHANGED, call.toJson());
-    }
 
     /**
      * Pauses active calls once user answer to incoming calls.
@@ -612,22 +421,8 @@ public class PjSipService extends Service {
         }
     }
 
-    /**
-     * Pauses all calls, used when received GSM call.
-     */
-    private void doPauseAllCalls() {
-        for (PjSipCall call : mCalls) {
-            try {
-                call.hold();
-            } catch (Exception e) {
-                Log.w(TAG, "Failed to put call on hold", e);
-            }
-        }
-    }
 
-    public void addCall(PjSipCall call) {
-        mCalls.add(call);
-    }
+
 
     public Endpoint getEndpoint() {
         return mEndpoint;
@@ -638,13 +433,16 @@ public class PjSipService extends Service {
     }
 
     public List<PjSipCall> getCalls() {
-        return mCalls;
+        return mCallStateHelper.getCalls();
     }
 
     public PjSipServiceAudiohelper getAudioHelper() {
         return mAudioHelper;
     }
 
+    // TODO: How do we handle GSM Stuff. Should be in Telephony helper anyway
+    /*
+    private BroadcastReceiver mPhoneStateChangedReceiver = new PhoneStateChangedReceiver();
 
     protected class PhoneStateChangedReceiver extends BroadcastReceiver {
         @Override
@@ -654,7 +452,7 @@ public class PjSipService extends Service {
             if (TelephonyManager.EXTRA_STATE_RINGING.equals(extraState) || TelephonyManager.EXTRA_STATE_OFFHOOK.equals(extraState)) {
                 Log.d(TAG, "GSM call received, pause all SIP calls and do not accept incoming SIP calls.");
 
-                mGSMIdle = false;
+                //mGSMIdle = false;
 
                 job(new Runnable() {
                     @Override
@@ -665,12 +463,16 @@ public class PjSipService extends Service {
                 });
             } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(extraState)) {
                 Log.d(TAG, "GSM call released, allow to accept incoming calls.");
-                mGSMIdle = true;
+                //mGSMIdle = true;
             }
         }
     }
-
+*/
     public void addTrash(Object trash) {
         mTrash.add(trash);
+    }
+
+    public PjSipForegroundHelper getForegroundHelper() {
+        return mForegroundHelper;
     }
 }

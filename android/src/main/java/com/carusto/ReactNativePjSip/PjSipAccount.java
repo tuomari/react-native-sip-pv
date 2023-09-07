@@ -1,6 +1,8 @@
 package com.carusto.ReactNativePjSip;
 
 import com.carusto.ReactNativePjSip.dto.AccountConfigurationDTO;
+import com.carusto.ReactNativePjSip.service.PjSipCallStateListener;
+
 import org.json.JSONObject;
 import org.pjsip.pjsua2.Account;
 import org.pjsip.pjsua2.OnIncomingCallParam;
@@ -16,13 +18,13 @@ public class PjSipAccount extends Account {
      */
     private String reason;
 
-    private PjSipService service;
+    private PjSipCallStateListener service;
 
     private AccountConfigurationDTO configuration;
 
     private Integer transportId;
 
-    public PjSipAccount(PjSipService service, int transportId, AccountConfigurationDTO configuration) {
+    public PjSipAccount(PjSipCallStateListener service, int transportId, AccountConfigurationDTO configuration) {
         this.service = service;
         this.transportId = transportId;
         this.configuration = configuration;
@@ -32,7 +34,7 @@ public class PjSipAccount extends Account {
         setRegistration(renew);
     }
 
-    public PjSipService getService() {
+    public PjSipCallStateListener getService() {
         return service;
     }
 
@@ -55,19 +57,19 @@ public class PjSipAccount extends Account {
     @Override
     public void onRegState(OnRegStateParam prm) {
         reason = prm.getReason();
-        service.emmitRegistrationChanged(this, prm);
+        service.emitRegistrationChanged(this, prm);
     }
 
     @Override
     public void onIncomingCall(OnIncomingCallParam prm) {
         PjSipCall call = new PjSipCall(this, prm.getCallId());
-        service.emmitCallReceived(this, call);
+        service.emitCallReceived(this, call);
     }
 
     @Override
     public void onInstantMessage(OnInstantMessageParam prm) {
         PjSipMessage message = new PjSipMessage(this, prm);
-        service.emmitMessageReceived(this, message);
+        service.emitMessageReceived(this, message);
     }
 
     public JSONObject toJson() {

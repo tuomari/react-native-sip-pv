@@ -154,7 +154,7 @@ public class AccountCreateAction extends PjSipReactAction implements PjSipAction
 
         // -----
 
-        PjSipAccount account = new PjSipAccount(service, transportId, configuration);
+        PjSipAccount account = new PjSipAccount(service.getCallStateHelper(), transportId, configuration);
         account.create(cfg);
 
         service.addTrash(cfg);

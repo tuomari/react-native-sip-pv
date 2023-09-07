@@ -1,5 +1,8 @@
 package com.carusto.ReactNativePjSip.service;
 
+import android.bluetooth.BluetoothHeadset;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFocusRequest;
@@ -52,7 +55,8 @@ public class PjSipServiceAudiohelper implements AutoCloseable {
     public PjSipServiceAudiohelper(PjSipService service, AudioManager audioManager) {
         this.service = service;
         this.mAudioManager = audioManager;
-        mAudioManager.registerAudioDeviceCallback(newAudioDeviceCallback, null);
+
+
     }
 
 
@@ -97,13 +101,16 @@ public class PjSipServiceAudiohelper implements AutoCloseable {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Optional<AudioDeviceInfo> selectedDevice = Optional.empty();
             // If there is a preferred device selected, use it
-            if(preferredAudioDeviceId != null) {
-              selectedDevice =  mAudioManager.getAvailableCommunicationDevices().stream().filter(t -> t.getId() == preferredAudioDeviceId).findAny();
+            Log.d(TAG, "Trying to select preferred device: " + preferredAudioDeviceId);
+            if (preferredAudioDeviceId != null) {
+                selectedDevice = mAudioManager.getAvailableCommunicationDevices().stream().filter(t -> t.getId() == preferredAudioDeviceId).findAny();
             }
             // Else try to use the bluetooth device with the biggest ID ( ie. added latest )
-            if(selectedDevice.isPresent()){
+            if (!selectedDevice.isPresent()) {
+                Log.d(TAG, "No preferred device found. Trying to select a bluetooth device");
                 selectedDevice = mAudioManager.getAvailableCommunicationDevices().stream().filter(t -> t.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO).max(Comparator.comparingInt(AudioDeviceInfo::getId));
             }
+
             selectedDevice.ifPresent(mAudioManager::setCommunicationDevice);
 
         }
@@ -115,10 +122,9 @@ public class PjSipServiceAudiohelper implements AutoCloseable {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             mAudioManager.clearCommunicationDevice();
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (audioFocus != null) {
-                mAudioManager.abandonAudioFocusRequest(audioFocus);
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioFocus != null) {
+            mAudioManager.abandonAudioFocusRequest(audioFocus);
+
         }
     }
 
@@ -140,5 +146,9 @@ public class PjSipServiceAudiohelper implements AutoCloseable {
             return mAudioManager.getCommunicationDevice();
         }
         return null;
+    }
+
+    public AudioManager getAudioManager() {
+        return mAudioManager;
     }
 }
